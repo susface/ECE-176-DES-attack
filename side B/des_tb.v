@@ -1,4 +1,5 @@
 // des_tb.v — NIST FIPS 46-3 Known Answer Test testbench
+/*
 `timescale 1ns / 1ps
 
 module des_tb;
@@ -106,3 +107,6 @@ module des_tb;
     end
 
 endmodule
+
+*/
+

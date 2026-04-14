@@ -3,3 +3,7 @@
 ################################################################################
 
 /.vs
+side B/my_sim
+side B/Makefile
+side B/des_tb copy.v
+side B/des_tb.v

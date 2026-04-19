@@ -13,10 +13,11 @@ module sideB_tb;
     sideBFSM uut(
         .clk(clk), .reset(reset), .start(start),
         .receivedPlaintext(receivedPlaintext), .receivedCiphertext(receivedCiphertext),
-        .match(match), .key(key)
+        .match(match), .key(key),
+        .startingKey(64'h0000000000000000), .endingKey(64'hFFFFFFFFFFFFFFF)
     );
 
-    always #10 clk = ~clk;
+    always #5 clk = ~clk;
 
     initial begin
         clk = 0;
@@ -28,6 +29,7 @@ module sideB_tb;
         start = 1;
         reset = 0;
         wait(match == 1);
+        // Result should be 0000000000000022
         $displayh(key);
         $finish;
     end

@@ -1,22 +1,20 @@
-// To-do: state machine that has a reset and start and gets an input ciphertext plaintext pair somehow. After being reset and started, begins going through
-// All possible keys and the received ciphertext to the generated ciphertext.
-// Current things on my mind: This state machine needs to go through its states slower than the DES Core it has inside it. How do we slow down only its own clock?
-// Maybe a counter?
-// Also, the input and output on here is not currently final / still figuring out the hardware side of things.
-// At the very least want to make it work for a testbench simulation.
 
-// Again, just to reiterate, the current inputs and outputs are not final.
 module sideBFSM (
     input clk, reset, start,
     input [63:0] receivedPlaintext,
     input [63:0] receivedCiphertext,
+    input [63:0] startingKey,
+    input [63:0] endingKey,
     output reg match,
-    output reg [63:0] key
+    output [63:0] key
 );
 
     reg         rst, start_internal;
     wire [63:0] ciphertext;
     wire        done;
+    reg [55:0] key_int;
+    // Skip redundant parity bits
+    assign key = {key_int[55:49], 1'b0, key_int[48:42], 1'b0, key_int[41:35], 1'b0, key_int[34:28], 1'b0, key_int[27:21], 1'b0, key_int[20:14], 1'b0, key_int[13:7], 1'b0, key_int[6:0], 1'b0};
 
     reg encryptionInProgress;
 
@@ -27,9 +25,9 @@ module sideBFSM (
         .ciphertext(ciphertext), .done(done)
     );
 
-    always@(negedge clk) begin
+    always@(posedge clk) begin
         if(reset) begin
-            key <= 0;
+            key_int <= {startingKey[63:57], startingKey[55:49], startingKey[47:41], startingKey[39:33], startingKey[31:25], startingKey[23:17], startingKey[15:9], startingKey[7:1]};
             rst <= 0;
             encryptionInProgress <= 0;
             start_internal <= 0;
@@ -49,9 +47,11 @@ module sideBFSM (
                         encryptionInProgress <= 0;
                     end
                     else begin
-                        key <= key + 1;
-                        rst <= 0;
-                        encryptionInProgress <= 0;
+                        if (key_int <= {endingKey[63:57], endingKey[55:49], endingKey[47:41], endingKey[39:33], endingKey[31:25], endingKey[23:17], endingKey[15:9], endingKey[7:1]}) begin
+                            key_int <= key_int + 1;
+                            rst <= 0;
+                            encryptionInProgress <= 0;
+                        end
                     end
                 end else begin
                     rst <= 1;

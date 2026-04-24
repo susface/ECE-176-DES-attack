@@ -39,7 +39,7 @@
 //
 //   [4] Terasic DE2-115 User Manual §4.6 — pin names, LCD_BLON restriction,
 //       and 8-bit parallel bus configuration.
-module lcd_ctrl_a (
+module lcd_ctrl_a (// This was done by me
     input  wire        clk,
     input  wire        rst_n,
     input  wire [1:0]  lcd_state,     // from defender_top.v
@@ -73,13 +73,13 @@ module lcd_ctrl_a (
         CMD_LINE1    = 8'h80,   // DDRAM address 0x00 (line 1 home)
         CMD_LINE2    = 8'hC0;   // DDRAM address 0x40 (line 2 home)
 
-    // ── Display state codes (must match defender_top.v) ───────────────────────
+    // ── Display state codes (must match defender_top.v) done by me
     localparam [1:0]
         DISP_BLANK   = 2'b00,
         DISP_LOCKED  = 2'b01,
         DISP_CRACKED = 2'b10;
 
-    // ── 128-bit character ROMs (MSB = leftmost character) ────────────────────
+    // ── 128-bit character ROMs (MSB = leftmost character) section below is done by me
     // "  DES DEFENDER  "
     localparam [127:0] LINE1_MSG =
         { 8'h20, 8'h20, 8'h44, 8'h45, 8'h53, 8'h20,
@@ -129,7 +129,7 @@ module lcd_ctrl_a (
         W_EN_LO = 2'd2,
         W_WAIT  = 2'd3;
 
-    // ── Registers ─────────────────────────────────────────────────────────────
+    // ── Registers ────────────────────────────────────────────────────── done by me
     reg [1:0]  state, w_state;
     reg [22:0] timer;
     reg [5:0]  seq_idx;
@@ -140,13 +140,13 @@ module lcd_ctrl_a (
     reg [7:0]  cur_byte;
     reg        cur_rs;
 
-    // Module-level temporaries for init_entry task outputs.
+    // Module-level temporaries for init_entry task outputs. done by me
     reg        t_rs;
     reg [7:0]  t_byt;
     reg [22:0] t_wt;
 
     // ── Helper: extract one byte from a 128-bit ROM at column pos (0 = left) ──
-    // Explicit case for 100% synthesiser compatibility (no dynamic bit-select).
+    // Explicit case for 100% synthesiser compatibility (no dynamic bit-select). done by me
     function [7:0] line_char;
         input [127:0] line;
         input [3:0]   pos;
@@ -197,7 +197,7 @@ module lcd_ctrl_a (
         end
     endtask
 
-    // ── Main always block ─────────────────────────────────────────────────────
+    // ── Main always block ──────────────────────────────────────────── everything below is done by me
     always @(posedge clk) begin
         if (!rst_n) begin
             state        <= S_PWR_WAIT;

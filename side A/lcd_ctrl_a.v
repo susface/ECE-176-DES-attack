@@ -22,12 +22,23 @@
 //   Power-on wait → 6-command init sequence →
 //   idle watching lcd_state → re-write both lines on any change.
 //
-// Bug fixes:
-//   1. t_rs/t_byt/t_wt promoted to module scope — Verilog does not
-//      allow local reg declarations inside named always-block begin/end, only system verilog.
-//   2. init_entry case items uniformly sized [5:0] (was mixed 6'd/5'd).
-//   3. Dead state S_START_WR removed; top-level FSM reduced to 4 states.
-
+// References / implementations used:
+//   [1] HD44780U Datasheet, Hitachi Semiconductor — primary source for all
+//       command bytes, initialization sequence, and timing requirements.
+//       https://www.sparkfun.com/datasheets/LCD/HD44780.pdf
+//
+//   [2] Jon Carrier, "FPGA_2_LCD.v" (2011) — Verilog LCD controller gist
+//       using a nested STATE/SUBSTATE FSM structure, the same
+//       command byte values (8'h38, 8'h0C, 8'h01, 8'h06), and a
+//       write-only LCD_RW=0 convention.
+//       https://gist.github.com/jjcarrier/1529101
+//
+//   [3] Edwin NC Mui, "Interfacing FPGA to HD44780 LCD" — paper describing
+//       the FSM-with-delay-elements approach for HD44780 timing control.
+//       https://www.scribd.com/doc/259857897/LCD-HD44780
+//
+//   [4] Terasic DE2-115 User Manual §4.6 — pin names, LCD_BLON restriction,
+//       and 8-bit parallel bus configuration.
 module lcd_ctrl_a (
     input  wire        clk,
     input  wire        rst_n,
@@ -40,14 +51,20 @@ module lcd_ctrl_a (
 );
 
     // ── Timing constants ─────────────────────────────────────────────────────
+    // Values derived from HD44780 datasheet [1] AC characteristics table.
+    // Approach of representing all delays as cycle counts at a fixed clock
+    // frequency is a common FPGA pattern; see also [2] and [3].
     localparam [22:0]
-        PWR_CYCLES = 23'd2_000_000,
-        CMD_CYCLES = 23'd100_000,
-        EN_SETUP   = 23'd5,
-        EN_WIDTH   = 23'd25,
-        EN_HOLD    = 23'd5;
+        PWR_CYCLES = 23'd2_000_000,   // ≥40 ms power-on wait (datasheet §4)
+        CMD_CYCLES = 23'd100_000,     // ≥2 ms command execution time
+        EN_SETUP   = 23'd5,           // ≥40 ns RS/RW setup before EN↑
+        EN_WIDTH   = 23'd25,          // ≥230 ns EN high pulse width
+        EN_HOLD    = 23'd5;           // ≥10 ns data hold after EN↓
 
     // ── HD44780 command bytes ─────────────────────────────────────────────────
+    // All values from HD44780 datasheet [1] instruction set table (p.24).
+    // Same byte values appear in [2] (SETUP=8'h38, DISP_ON=8'h0C,
+    // CLEAR=8'h01, ENTRY_N=8'h06) — these are universal for this chip.
     localparam [7:0]
         CMD_FUNC_SET = 8'h38,   // 8-bit bus, 2-line, 5×8 font
         CMD_DISP_ON  = 8'h0C,   // display on, cursor off, blink off
@@ -93,6 +110,9 @@ module lcd_ctrl_a (
         WRITE_LEN = 6'd34;   // CMD_LINE1 + 16 chars + CMD_LINE2 + 16 chars
 
     // ── Top-level FSM (4 states — S_START_WR removed as dead code) ───────────
+    // Nested outer inner FSM structure is a common pattern for HD44780 control;
+    // see [2] which uses the same STATE/SUBSTATE split, and [3] which describes
+    // the general FSM-with-delay-elements approach for this chip.
     localparam [1:0]
         S_PWR_WAIT = 2'd0,
         S_INIT     = 2'd1,
@@ -100,6 +120,9 @@ module lcd_ctrl_a (
         S_WRITE    = 2'd3;
 
     // ── Byte-send sub-FSM ─────────────────────────────────────────────────────
+    // 4-phase sequence (SETUP → EN_HI → EN_LO → WAIT) implements the
+    // EN-pulse write cycle from HD44780 datasheet [1] Figure 9 (p.22).
+    // LCD_RW held permanently low (write-only) — same convention as [2].
     localparam [1:0]
         W_SETUP = 2'd0,
         W_EN_HI = 2'd1,
@@ -118,8 +141,6 @@ module lcd_ctrl_a (
     reg        cur_rs;
 
     // Module-level temporaries for init_entry task outputs.
-    // FIX: Verilog-2001 forbids local reg declarations inside an always-block
-    // named begin/end (that is SystemVerilog).  Promote to module scope.
     reg        t_rs;
     reg [7:0]  t_byt;
     reg [22:0] t_wt;
@@ -153,7 +174,11 @@ module lcd_ctrl_a (
     endfunction
 
     // ── Init ROM task ─────────────────────────────────────────────────────────
-    // FIX: all case items now use uniform 6'd literals (was mixed 6'd/5'd).
+    // Sequence mandated by HD44780 datasheet [1] Figure 23 (p.45):
+    // "Initializing by Instruction" for 8-bit interface.
+    // Three repeated Function Set commands followed by Display On,
+    // Clear Display, and Entry Mode Set.  This exact sequence appears
+    // in virtually every HD44780 FPGA driver including [2] and [3].
     task init_entry;
         input  [5:0]  idx;
         output        rs;

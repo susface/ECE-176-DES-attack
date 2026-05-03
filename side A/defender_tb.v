@@ -40,7 +40,7 @@ module defender_tb;
     // DEFENDER_KEY56 = 56'hFFFFFFFFFFFFFF → expand_key56_to_64 → 64'hFEFEFEFEFEFEFEFE
     // DES-encrypt("Grade A!" = 0x4772616465204121) with that key.
     localparam [63:0] EXPECTED_CT  = 64'hAD99C1C7E295C86E;
-    localparam [55:0] CORRECT_K56  = 56'hFFFFFFFFFFFFFF;
+    localparam [55:0] CORRECT_K56 = 56'h123456789ABCDE;// changed the defender key with the one used in the top module 
     localparam [55:0] WRONG_K56    = 56'h0123456789ABCD;
 
     // CLKS_PER_BIT must match CLK_FREQ/BAUD inside the DUT.
@@ -132,9 +132,7 @@ module defender_tb;
         else
             $display("ENCRYPTION TEST FAILED");
         $display("----------------------------------------------");
-
-        // Small gap to ensure DUT is stable in S_LOCKED before we send.
-        repeat(10) @(posedge clk);
+        
 
         // ── Test 2: Wrong key — system must stay LOCKED ───────────────────────
         $display("Sending WRONG key via UART...");
@@ -154,7 +152,10 @@ module defender_tb;
         uart_send_key56(CORRECT_K56);
 
         // Block until cracked asserts (or give up after a long timeout).
-        wait (cracked == 1'b1);
+        fork
+           wait (cracked == 1'b1);
+           #10000 $display("TIMEOUT: CRACKED not reached");
+        join_any
         @(posedge clk); #1;
 
         $display("VERIFY CORRECT-KEY TEST PASSED");

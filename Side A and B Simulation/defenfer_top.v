@@ -178,7 +178,9 @@ module defender_top (
         end 
         else begin
             tx_start <= 0;
-
+            if(state == ENC && enc_done) begin
+                sending <= 1;
+            end
             if (sending) begin
                 // Step 1: Fire the start pulse and lock the state
                 if (!tx_busy && !tx_wait) begin
@@ -238,7 +240,7 @@ module defender_top (
                 ENC:
                     if (enc_done) begin
                         ciphertext_reg <= enc_out;
-                        sending <= 1; // send ciphertext
+                        //sending <= 1; // send ciphertext // Moving this line to the other procedural block because multiple blocks can't drive the same register
                         state <= LOCKED;
                     end
 

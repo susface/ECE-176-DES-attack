@@ -103,7 +103,9 @@ module attacker_top (
             tx_wait  <= 0;
         end else begin
             tx_start <= 0; // default state
-            
+            if (state == CRACKING && bfsm_match) begin
+					sending <= 1;
+				end
             if (sending) begin
                 // Step 1: Fire the start pulse and lock the state
                 if (!tx_busy && !tx_wait) begin
@@ -154,7 +156,6 @@ module attacker_top (
 
                 CRACKING: begin
                     if (bfsm_match) begin
-                        sending <= 1; // Trigger UART transmission
                         state   <= SEND_KEY;
                     end
                 end

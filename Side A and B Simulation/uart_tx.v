@@ -28,7 +28,7 @@ module uart_tx # (
     // Edge detection for start signal (prevents retriggering)
     reg start_d;
     always @(posedge clk) start_d <= start;
-    end
+    
 
     wire start_pulse = start & ~start_d;
 

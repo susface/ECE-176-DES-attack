@@ -48,7 +48,8 @@ module sideBFSM (
                 if (key_int < {endingKey[63:57], endingKey[55:49], endingKey[47:41], 
                                endingKey[39:33], endingKey[31:25], endingKey[23:17], 
                                endingKey[15:9], endingKey[7:1]}) begin
-                    key_int <= key_int + 1;
+                    key_int <= key_int + 1; // This needs to be in the clocked block instead of the combinational block because otherwise it just increments key_int endlessly
+                    // Could be changed by having a key_int_next register...
                 end
             end
         end

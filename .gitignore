@@ -8,3 +8,5 @@ side B/Makefile
 side B/des_tb copy.v
 side B/des_tb.v
 Testing/
+Side A and B Simulation/Makefile
+Side A and B Simulation/my_sim

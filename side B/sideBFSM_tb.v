@@ -60,6 +60,12 @@ module sideB_tb;
         
         // Result should be 0x0000000000003222
         $display("Found key: 0x%h", key);
+        if (key == 64'h0000000000003222) begin
+            $display("The correct key was found. Test passed.");
+        end
+        else begin
+            $display("Incorrect key found. Test failed.");
+        end
         $finish;
     end
 

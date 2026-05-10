@@ -52,6 +52,7 @@ module attacker_top (
         end
     end
 
+    // True when the full ciphertext has been received.
     wire cipher_ready = (rx_byte_cnt == 4'd8);
 
     // --- Brute Force FSM Instantiation ---
@@ -127,6 +128,7 @@ module attacker_top (
                     tx_wait <= 0; // Unlock for the next cycle
                     
                     if (tx_idx == 3'd6) begin // 7 bytes total
+                        // Sending has finished
                         sending <= 0;
                         tx_idx  <= 0;
                     end else begin

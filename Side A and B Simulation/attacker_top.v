@@ -150,7 +150,6 @@ module attacker_top (
             case (state)
                 RCV_CIPHER: begin
                     if (cipher_ready) begin
-                        $display("Starting crack");
                         bfsm_start <= 1; // Pulse start for sideBFSM
                         state      <= CRACKING;
                     end

@@ -13,7 +13,7 @@ module attacker_top (
     input  wire        uart_rx,    // Serial input from defender
 
     output wire        uart_tx,    // Serial output to defender
-    output wire        match_led   // Tie this to a green LED on the DE2-115!
+    output wire        match_led   
 );
 
     // Hardcoded plaintext to match defender ("Grade A!")
@@ -52,6 +52,7 @@ module attacker_top (
         end
     end
 
+    // True when the full ciphertext has been received.
     wire cipher_ready = (rx_byte_cnt == 4'd8);
 
     // --- Brute Force FSM Instantiation ---
@@ -71,9 +72,6 @@ module attacker_top (
 
     assign match_led = bfsm_match;
 
-    // The defender expects a 56-bit key. Your sideBFSM outputs a 64-bit key 
-    // with parity bits inserted. We need to strip the parity bits back out 
-    // to get the raw 56-bit key for transmission.
     wire [55:0] cracked_key_56 = {
         bfsm_key_out[63:57], bfsm_key_out[55:49], 
         bfsm_key_out[47:41], bfsm_key_out[39:33], 
@@ -81,12 +79,12 @@ module attacker_top (
         bfsm_key_out[15:9], bfsm_key_out[7:1]
     };
 
-    // --- UART TX Logic (Sending Cracked Key) ---
+    // UART TX Logic (Sending Cracked Key)
     reg [2:0] tx_idx;
     reg       tx_start;
     reg [7:0] tx_data;
     reg       sending;
-    reg       tx_wait; // NEW: Flag to wait for UART to acknowledge
+    reg       tx_wait;
     wire      tx_busy;
 
     uart_tx u_tx (
@@ -103,10 +101,12 @@ module attacker_top (
             sending  <= 0;
             tx_idx   <= 0;
             tx_start <= 0;
-            tx_wait  <= 0; // Reset new flag
+            tx_wait  <= 0;
         end else begin
             tx_start <= 0; // default state
-            
+            if (state == CRACKING && bfsm_match) begin
+					sending <= 1;
+				end
             if (sending) begin
                 // Step 1: Fire the start pulse and lock the state
                 if (!tx_busy && !tx_wait) begin
@@ -124,11 +124,11 @@ module attacker_top (
                     tx_start <= 1;
                     tx_wait  <= 1; // Block further sends until UART goes busy
                 end
-                // Step 2: Wait for UART to assert busy, then unlock and prep next byte
                 else if (tx_busy && tx_wait) begin
                     tx_wait <= 0; // Unlock for the next cycle
                     
                     if (tx_idx == 3'd6) begin // 7 bytes total
+                        // Sending has finished
                         sending <= 0;
                         tx_idx  <= 0;
                     end else begin
@@ -150,7 +150,6 @@ module attacker_top (
             case (state)
                 RCV_CIPHER: begin
                     if (cipher_ready) begin
-                        $display("Starting crack");
                         bfsm_start <= 1; // Pulse start for sideBFSM
                         state      <= CRACKING;
                     end
@@ -158,7 +157,6 @@ module attacker_top (
 
                 CRACKING: begin
                     if (bfsm_match) begin
-                        sending <= 1; // Trigger UART transmission
                         state   <= SEND_KEY;
                     end
                 end
